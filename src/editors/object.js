@@ -65,10 +65,9 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       if(typeof orderb !== "number") orderb = 1000;
 
       return ordera - orderb;
-    });
-
+    });    
     var container;
-
+    
     if(this.format === 'grid') {
       var rows = [];
       $each(this.property_order, function(j,key) {
@@ -88,7 +87,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
             }
           }
         }
-
         // If there isn't a spot in any of the existing rows, start a new row
         if(found === false) {
           rows.push({
@@ -99,7 +97,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
           });
           found = rows.length-1;
         }
-
         rows[found].editors.push({
           key: key,
           //editor: editor,
@@ -110,7 +107,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         rows[found].minh = Math.min(rows[found].minh,height);
         rows[found].maxh = Math.max(rows[found].maxh,height);
       });
-
       // Make almost full rows width 12
       // Do this by increasing all editors' sizes proprotionately
       // Any left over space goes to the biggest editor
@@ -130,11 +126,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
           rows[i].width = 12;
         }
       }
-
-      // layout hasn't changed
-      if(this.layout === JSON.stringify(rows)) return false;
-      this.layout = JSON.stringify(rows);
-
       // Layout the form
       container = document.createElement('div');
       for(i=0; i<rows.length; i++) {
@@ -143,7 +134,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         for(j=0; j<rows[i].editors.length; j++) {
           var key = rows[i].editors[j].key;
           var editor = this.editors[key];
-
           if(editor.options.hidden) editor.container.style.display = 'none';
           else this.theme.setGridColumnSize(editor.container,rows[i].editors[j].width);
           row.appendChild(editor.container);
@@ -158,7 +148,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         if(editor.property_removed) return;
         var row = self.theme.getGridRow();
         container.appendChild(row);
-
         if(editor.options.hidden) editor.container.style.display = 'none';
         else self.theme.setGridColumnSize(editor.container,12);
         row.appendChild(editor.container);
@@ -612,7 +601,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
     // Property is already added
     if(this.editors[name]) return;
-
     // Property was added before and is cached
     if(this.cached_editors[name]) {
       this.editors[name] = this.cached_editors[name];
@@ -820,7 +808,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         if(self.editors[i]) self.editors[i].setValue(val,initial);
       }
     });
-
+    
     this.refreshValue();
     this.layoutEditors();
     this.onChange();
