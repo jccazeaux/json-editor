@@ -2359,7 +2359,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       }
     }
   },
-  layoutEditors: function() {
+  layoutEditor: function(editor) {
     var self = this, i, j;
     
     if(!this.row_container) return;
@@ -2375,105 +2375,27 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       return ordera - orderb;
     });
     
+    // If main container doesn't exist, create it
     var container;
-    
-    if(this.format === 'grid') {
-      var rows = [];
-      $each(this.property_order, function(j,key) {
-        var editor = self.editors[key];
-        if(editor.property_removed) return;
-        var found = false;
-        var width = editor.options.hidden? 0 : (editor.options.grid_columns || editor.getNumColumns());
-        var height = editor.options.hidden? 0 : editor.container.offsetHeight;
-        // See if the editor will fit in any of the existing rows first
-        for(var i=0; i<rows.length; i++) {
-          // If the editor will fit in the row horizontally
-          if(rows[i].width + width <= 12) {
-            // If the editor is close to the other elements in height
-            // i.e. Don't put a really tall editor in an otherwise short row or vice versa
-            if(!height || (rows[i].minh*0.5 < height && rows[i].maxh*2 > height)) {
-              found = i;
-            }
-          }
-        }
-        
-        // If there isn't a spot in any of the existing rows, start a new row
-        if(found === false) {
-          rows.push({
-            width: 0,
-            minh: 999999,
-            maxh: 0,
-            editors: []
-          });
-          found = rows.length-1;
-        }
-        
-        rows[found].editors.push({
-          key: key,
-          //editor: editor,
-          width: width,
-          height: height
-        });
-        rows[found].width += width;
-        rows[found].minh = Math.min(rows[found].minh,height);
-        rows[found].maxh = Math.max(rows[found].maxh,height);
-      });
-      
-      // Make almost full rows width 12
-      // Do this by increasing all editors' sizes proprotionately
-      // Any left over space goes to the biggest editor
-      // Don't touch rows with a width of 6 or less
-      for(i=0; i<rows.length; i++) {
-        if(rows[i].width < 12) {
-          var biggest = false;
-          var new_width = 0;
-          for(j=0; j<rows[i].editors.length; j++) {
-            if(biggest === false) biggest = j;
-            else if(rows[i].editors[j].width > rows[i].editors[biggest].width) biggest = j;
-            rows[i].editors[j].width *= 12/rows[i].width;
-            rows[i].editors[j].width = Math.floor(rows[i].editors[j].width);
-            new_width += rows[i].editors[j].width;
-          }
-          if(new_width < 12) rows[i].editors[biggest].width += 12-new_width;
-          rows[i].width = 12;
-        }
-      }
-      
-      // layout hasn't changed
-      if(this.layout === JSON.stringify(rows)) return false;
-      this.layout = JSON.stringify(rows);
-      
-      // Layout the form
+    if (!this.row_container.children[0]) {
       container = document.createElement('div');
-      for(i=0; i<rows.length; i++) {
-        var row = this.theme.getGridRow();
-        container.appendChild(row);
-        for(j=0; j<rows[i].editors.length; j++) {
-          var key = rows[i].editors[j].key;
-          var editor = this.editors[key];
-          
-          if(editor.options.hidden) editor.container.style.display = 'none';
-          else this.theme.setGridColumnSize(editor.container,rows[i].editors[j].width);
-          row.appendChild(editor.container);
-        }
-      }
+      this.row_container.appendChild(container);
     }
-    // Normal layout
-    else {
-      container = document.createElement('div');
-      $each(this.property_order, function(i,key) {
-        var editor = self.editors[key];
-        if(editor.property_removed) return;
-        var row = self.theme.getGridRow();
-        container.appendChild(row);
-        
-        if(editor.options.hidden) editor.container.style.display = 'none';
-        else self.theme.setGridColumnSize(editor.container,12);
-        row.appendChild(editor.container);
-      });
+    container = this.row_container.children[0];
+    if(editor.property_removed) return;
+    var row = self.theme.getGridRow();
+    var index = this.property_order.indexOf(editor.key);
+    if (index === this.property_order.length - 1) {
+      container.appendChild(row);
+    } else {
+      container.insertBefore(row, container.children[index + 1]);
     }
-    this.row_container.innerHTML = '';
-    this.row_container.appendChild(container);
+
+      
+    if(editor.options.hidden) editor.container.style.display = 'none';
+    else self.theme.setGridColumnSize(editor.container,12);
+    row.appendChild(editor.container);
+
   },
   getPropertySchema: function(key) {
     // Schema declared directly in properties
@@ -2686,11 +2608,12 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
 
       $each(this.editors, function(key,editor) {
         var holder = self.theme.getGridColumn();
-        self.row_container.appendChild(holder);
+        //self.row_container.appendChild(holder);
 
         editor.setContainer(holder);
         editor.build();
         editor.postBuild();
+        self.layoutEditor(editor);
       });
 
       // Control buttons
@@ -2773,9 +2696,9 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // Layout object editors in grid if needed
     else {
       // Initial layout
-      this.layoutEditors();
+    //  this.layoutEditors();
       // Do it again now that we know the approximate heights of elements
-      this.layoutEditors();
+    //  this.layoutEditors();
     }
   },
   showEditJSON: function() {
@@ -2909,10 +2832,11 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   removeObjectProperty: function(property) {
     if(this.editors[property]) {
       this.editors[property].unregister();
+      this.editors[property].container.parentElement.removeChild(this.editors[property].container);
       delete this.editors[property];
       
       this.refreshValue();
-      this.layoutEditors();
+      //this.layoutEditors();
     }
   },
   addObjectProperty: function(name, prebuild_only) {
@@ -2921,12 +2845,6 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // Property is already added
     if(this.editors[name]) return;
     
-    // Property was added before and is cached
-    if(this.cached_editors[name]) {
-      this.editors[name] = this.cached_editors[name];
-      if(prebuild_only) return;
-      this.editors[name].register();
-    }
     // New property
     else {
       if(!this.canHaveAdditionalProperties() && (!this.schema.properties || !this.schema.properties[name])) {
@@ -2961,7 +2879,8 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     // If we're only prebuilding the editors, don't refresh values
     if(!prebuild_only) {
       self.refreshValue();
-      self.layoutEditors();
+      //self.layoutEditors();
+      self.layoutEditor(self.editors[name]);
     }
   },
   onChildEditorChange: function(editor) {
@@ -3128,9 +3047,9 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
         if(self.editors[i]) self.editors[i].setValue(val,initial);
       }
     });
-    
+
     this.refreshValue();
-    this.layoutEditors();
+    // this.layoutEditors();
     this.onChange();
   },
   showValidationErrors: function(errors) {
